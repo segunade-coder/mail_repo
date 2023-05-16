@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Send Result</title>
+</head>
+
+<body>
+    <div class="container" style="font-family: 'Arial';">
+        <h1 >Send Result</h1>
+
+        <form action="" id="send_result" style="display: flex;flex-direction: column; gap: .5rem;">
+            <label for="select_send">Choose who to send</label>
+            <select id="select_send">
+                <option value="a_p">All Parents</option>
+                <option value="s_p">Selected Parents</option>
+                <option value="paid">Paid</option>
+            </select>
+            <label style="display: none;" class="selected-parent-label">
+                Enter email(s)
+                <input type="text" class="selected-parent" placeholder="Separate emails with a comma"
+                    style="width: 100%;">
+            </label>
+            <label for="message">Message: </label>
+            <button type="submit" id="send_result_btn">Send Result</button>
+        </form>
+        
+        <h1>Notify Parent</h1>
+
+        <form action="" id="send_message" style="display: flex;flex-direction: column; gap: .5rem;">
+            <label for="select_send_msg">Choose who to send</label>
+            <select id="select_send_msg">
+                <option value="msg_a_p">All Parents</option>
+                <option value="msg_s_p">Selected Parents</option>
+                <option value="msg_paid">Paid</option>
+            </select>
+            <label style="display: none;" class="msg_selected-parent-label">
+                Enter email(s)
+                <input type="text" class="msg_selected-parent" placeholder="Separate emails with a comma"
+                    style="width: 100%;">
+            </label>
+            <label for="message">Message: </label>
+            <textarea id="message" cols="30" rows="5" placeholder="Type message..."></textarea>
+
+            <button type="submit" id="send_msg_btn">Send Message</button>
+        </form>
+    </div>
+    <script src="./jquery.min.js"></script>
+    <script>
+
+        let _ = (id, all = false) => {
+            if (all) return document.querySelectorAll(id)
+            else return document.querySelector(id)
+        }
+
+        let sendForm = (formData, btn, btnText) => {
+            _(btn).setAttribute('disabled', true)
+            _(btn).innerText = "..."
+            $.post('mail_send.php', {
+                action: Object.keys(formData)[0], rest:  formData[Object.keys(formData)[0]],
+            }).done(data => {
+                console.log(data);
+            })
+            .always(() => {
+                _(btn).innerText = btnText;
+                _(btn).removeAttribute('disabled')
+            })
+            .fail((err) => {
+                console.log('failed');
+            })
+        }
+
+        let handleSubmit = (e) => {
+            let formObj = Object.create(null)
+            e.preventDefault()
+            let selected_emails;
+            if (_("#select_send").selectedIndex == 1 && (_('.selected-parent').value == null || _('.selected-parent').value == "")) {
+                alert('Enter a valid email address')
+                return false
+            }
+            _("#select_send").selectedIndex == 1 ? selected_emails = _('.selected-parent').value.split(",") : selected_emails = [];
+            (selected_emails.length > 0) ? formObj.s_p = { status: true, p: selected_emails.map(x => x.toLowerCase().trim()).filter(x => x !== "") } : null;
+            // 'Send result to ' + formObj.s_p.p[0] + formObj.s_p.p.length > 1 ? ', and ' + formObj.s_p.p.length - 1 + 'parents' : ''
+            if (_("#select_send").selectedIndex == 1) {
+                let msg = 'Send result to ' + formObj.s_p.p[0]
+                let otherMsg = Number(formObj.s_p.p.length) > 1 ? ' and ' + Number(formObj.s_p.p.length - 1) + ' other parents?' : ''
+                let confirmSend = window.confirm(msg + otherMsg)
+                if (!confirmSend) return false;
+            }
+            if (_("#select_send").selectedIndex == 0) formObj.a_p = { status: true };
+            if (_("#select_send").selectedIndex == 2) formObj.p = { status: true };
+            console.log('a form was submitted', formObj)
+
+            sendForm(formObj, '#send_result_btn', 'Send Result')
+        }
+
+        let handleSubmitMsg = (e) => {
+            let formObj = Object.create(null)
+            e.preventDefault()
+            let selected_emails;
+            if (_("#select_send_msg").selectedIndex == 1 && (_('.msg_selected-parent').value == null || _('.msg_selected-parent').value == "")) {
+                alert('Enter a valid email address')
+                return false
+            }
+            if (_('#message').value == null || _('#message').value == "") {
+                alert('Enter a message to send')
+                return false
+            }
+            _("#select_send_msg").selectedIndex == 1 ? selected_emails = _('.msg_selected-parent').value.split(",") : selected_emails = [];
+            (selected_emails.length > 0) ? formObj.msg_s_p = { status: true, p: selected_emails.map(x => x.toLowerCase().trim()).filter(x => x !== ""), msg:_("#message").value.trim()} : null;
+            // 'Send result to ' + formObj.s_p.p[0] + formObj.s_p.p.length > 1 ? ', and ' + formObj.s_p.p.length - 1 + 'parents' : ''
+            if (_("#select_send_msg").selectedIndex == 1) {
+                let msg = 'Send message to ' + formObj.msg_s_p.p[0]
+                let otherMsg = Number(formObj.msg_s_p.p.length) > 1 ? ' and ' + Number(formObj.msg_s_p.p.length - 1) + ' other parents?' : ''
+                let confirmSend = window.confirm(msg + otherMsg)
+                if (!confirmSend) return false;
+            }
+            if (_("#select_send_msg").selectedIndex == 0) formObj.msg_a_p = { status: true, msg:_("#message").value.trim() };
+            if (_("#select_send_msg").selectedIndex == 2) formObj.msg_p = { status: true, msg:_("#message").value.trim()};
+            console.log('a form was submitted', formObj)
+
+            sendForm(formObj, '#send_msg_btn', 'Send Message')
+
+        }
+
+        let handleSelectChange = (e) => {
+            let input = _('.selected-parent-label');
+            if (e.target.value.toLowerCase() === 's_p') input.style.display = 'block'
+            else input.style.display = 'none'
+        }
+
+        let handleSelectChangeMsg = (e) => {
+            let input = _('.msg_selected-parent-label');
+            if (e.target.value.toLowerCase() === 'msg_s_p') input.style.display = 'block'
+            else input.style.display = 'none'
+        }
+
+        _('#send_result').addEventListener('submit', handleSubmit)
+        _('#send_message').addEventListener('submit', handleSubmitMsg)
+        _('#select_send').addEventListener('change', handleSelectChange)
+        _('#select_send_msg').addEventListener('change', handleSelectChangeMsg)
+    </script>
+</body>
+
+</html>
